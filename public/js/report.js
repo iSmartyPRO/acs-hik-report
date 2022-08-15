@@ -90,8 +90,19 @@ function getGridSize() {
 document.addEventListener('DOMContentLoaded', async (event) => {
     if (!csvfileid) return;
     rowData = await processCSVfile(csvfileid);
-    rowData.forEach((rr) => {
+    rowData.forEach((rr, r) => {
         rr.date = rz.dateFromString((rz.strSubString(rr.date, "", ".")).replace("T", " "), "YYYY-MM-DD hh:mm:ss");
+        rr.actionsTable = "<table style='line-height: 20px;'><tbody>";
+        // if (r === 0) console.log(rr);
+        rr.actions.forEach((aa) => {
+            rr.actionsTable += "<tr>"
+                + "<td class='subtablecell'>" + (aa.zone === "Зелёная зона" ? "<span uk-icon='icon: home; ratio:2' uk-tooltip='Зелёная зона' style='color:green;'></span>" : "<span uk-icon='icon: bolt; ratio:2' uk-tooltip='Красная зона' style='color:red;'></span>") + "</td>"
+                + "<td class='subtablecell'>" + (aa.direction === "Вход" ? "<span uk-icon='icon: sign-in; ratio:2' uk-tooltip='Вход' style='color:Deepskyblue;'></span>" : "<span uk-icon='icon: sign-out; ratio:2' uk-tooltip='Выход' style='color:Violet;'></span>") + "</td>"
+                + "<td class='uk-margin-left-small'>" + rz.dateToString(rz.dateFromString((rz.strSubString(aa.fullDate, "", ".")).replace("T", " "), "YYYY-MM-DD hh:mm:ss"), "YYYY-MM-DD hh:mm:ss") + "</td>"
+            + "</tr>"
+        });
+        rr.actionsTable += "</tbody></table>";
+
         // rr.datestr = rz.dateToString(rr.date, "YYYY-MM-DD");
         /*
         if (rr.timeFirst) rr.timeFirst = rz.dateFromString((rz.strSubString(rr.timeFirst, "", ".")).replace("T", " "), "YYYY-MM-DD hh:mm:ss");
@@ -113,12 +124,13 @@ document.addEventListener('DOMContentLoaded', async (event) => {
         {
             field: "zone",
             headerName: "Зона",
-            menuTabs: ["filterMenuTab"],
+            menuTabs: ["filterMenuTab", "columnsMenuTab", "generalMenuTab"],
             cellRenderer: cellRenderHTML,
             filter: "agSetColumnFilter",
             filterParams: { values: getFilterValues, refreshValuesOnOpen: false },
-            tooltipField: "zone"
-        },
+            tooltipField: "zone",
+            width: "130px"
+        }, /*
         {
             field: "direction",
             headerName: "Направление",
@@ -129,13 +141,6 @@ document.addEventListener('DOMContentLoaded', async (event) => {
             tooltipField: "direction"
         },
         {
-            field: "datestr",
-            headerName: "Дата_текст",
-            menuTabs: ["filterMenuTab"],
-            filter: "agTextColumnFilter",
-            tooltipField: "datestr"
-        },
-        {
             field: "date",
             headerName: "Полная Дата",
             menuTabs: ["filterMenuTab"],
@@ -143,6 +148,22 @@ document.addEventListener('DOMContentLoaded', async (event) => {
             cellRenderer: cellRenderHTML,
             filter: "agDateColumnFilter",
             tooltipField: "date"
+        }, */
+        {
+            field: "datestr",
+            headerName: "Дата_текст",
+            menuTabs: ["filterMenuTab"],
+            filter: "agTextColumnFilter",
+            tooltipField: "datestr",
+            width: "130px"
+        },
+        {
+            field: "companyName",
+            headerName: "Компания",
+            menuTabs: ["filterMenuTab"],
+            cellRenderer: cellRenderHTML,
+            filter: "agTextColumnFilter",
+            tooltipField: "companyName"
         },
         {
             field: "companyType",
@@ -154,12 +175,19 @@ document.addEventListener('DOMContentLoaded', async (event) => {
             tooltipField: "companyType"
         },
         {
-            field: "companyName",
-            headerName: "Компания",
+            field: "name",
+            headerName: "ФИО",
             menuTabs: ["filterMenuTab"],
-            cellRenderer: cellRenderHTML,
             filter: "agTextColumnFilter",
-            tooltipField: "companyName"
+            tooltipField: "name"
+        },
+        {
+            field: "tabelNumber",
+            headerName: "Табельный номер",
+            menuTabs: ["filterMenuTab"],
+            filter: "agTextColumnFilter",
+            tooltipField: "tabelNumber",
+            width: "130px"
         },
         {
             field: "employeeType",
@@ -167,29 +195,8 @@ document.addEventListener('DOMContentLoaded', async (event) => {
             menuTabs: ["filterMenuTab"],
             filter: "agSetColumnFilter",
             filterParams: { values: getFilterValues, refreshValuesOnOpen: false },
-            tooltipField: "employeeType"
-        },
-        {
-            field: "tabelNumber",
-            headerName: "Табельный номер",
-            menuTabs: ["filterMenuTab"],
-            filter: "agTextColumnFilter",
-            tooltipField: "tabelNumber"
-        },
-        {
-            field: "name",
-            headerName: "ФИО",
-            menuTabs: ["filterMenuTab"],
-            filter: "agTextColumnFilter",
-            tooltipField: "name"
-        }, /*
-        {
-            field: "timeFirst",
-            headerName: "Время входа",
-            menuTabs: ["filterMenuTab"],
-            cellRenderer: cellDateFormatter,
-            filter: "agDateColumnFilter",
-            tooltipField: "time"
+            tooltipField: "employeeType",
+            width: "130px"
         },
         {
             field: "timeIn",
@@ -208,20 +215,20 @@ document.addEventListener('DOMContentLoaded', async (event) => {
             tooltipField: "timeOut"
         },
         {
-            field: "timeLast",
-            headerName: "Время выхода",
-            menuTabs: ["filterMenuTab"],
-            cellRenderer: cellDateFormatter,
-            filter: "agDateColumnFilter",
-            tooltipField: "time"
-        }, */
-        {
             field: "timeTotal",
             headerName: "Общее время",
             menuTabs: ["filterMenuTab"],
             cellRenderer: cellRenderHTML,
             filter: "agNumberColumnFilter",
-            tooltipField: "timeTotal"
+            tooltipField: "timeTotal",
+            width: "140px"
+        },
+        {
+            field: "actionsTable",
+            headerName: "Действия",
+            cellRenderer: cellRenderHTML,
+            filter: "agNumberColumnFilter",
+            width: "210px"
         }
     ];
 
@@ -229,7 +236,8 @@ document.addEventListener('DOMContentLoaded', async (event) => {
         // Параметры строк:
         rowModelType: "clientSide", // Это самый важный параметр, определяющий все поведение AG-GRID
         rowData,
-        rowHeight: 50,
+        // rowHeight: "50",
+        getRowHeight,
         suppressMaxRenderedRowRestriction: true,
         // Параметры столбцов:
         columnDefs,
@@ -247,7 +255,7 @@ document.addEventListener('DOMContentLoaded', async (event) => {
         // rowSelection: "single",
         suppressRowClickSelection: false,
         // PopUp-Menu
-        allowContextMenuWithControlKey: true, getContextMenuItems,
+        allowContextMenuWithControlKey: false, getContextMenuItems,
         floatingFilter: false, // Отдельная строка с фильтром
         // Прочие параметры
         animateRows: true,
@@ -276,7 +284,7 @@ const onFirstDataRendered = function (params) {
     const autosizeFields = ["zone", "companyType", "companyName", "name", "timeIn", "timeOut"];
     setTimeout(function () {
         // auto-size-column-width
-        params.columnApi.autoSizeColumns(autosizeFields);
+        // params.columnApi.autoSizeColumns(autosizeFields);
     }, 500);
 }
 
@@ -322,6 +330,12 @@ function cellRenderHTML(params) {
     }
 
     return params.value;
+}
+
+function getRowHeight(params) {
+    let heigh = 50;
+    if (params.data.actions && params.data.actions.length) heigh = params.data.actions.length * 35;
+    return heigh;
 }
 
 function cellDateFormatter(params) {

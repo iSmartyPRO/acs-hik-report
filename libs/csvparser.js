@@ -100,7 +100,7 @@ csvlib.filterData = (data) => {
   people.forEach((aa) => {
     if (aa.entrances && aa.entrances.length) {
       let doing = true;
-      while (doing) {
+      while (doing && aa.entrances.length) {
         const ee = aa.entrances[0];
         if (ee.direction === "Выход" || ee.zone === "Красная зона") {
           aa.entrances.shift();
@@ -176,6 +176,7 @@ csvlib.filterData = (data) => {
   const ans = [];
   people.forEach((aa) => {
     aa.dates.forEach((bb, b) => {
+      /*
       bb.actions.forEach((cc, c) => {
         const protoRow = {
           zone: cc.zone,
@@ -192,47 +193,52 @@ csvlib.filterData = (data) => {
 
         ans.push(protoRow);
       });
-
-
-      /*
-      ["Зелёная зона", "Красная зона"].forEach((zz) => {
-        let firstActionIndex = 0, lastActionIndex = 0;
-        for (let j = 0; j < bb.actions.length; j++) {
-          if (bb.actions[j].zone === zz) { firstActionIndex = j; break }
-        }
-        for (let k = bb.actions.length-1; k >= 0; k--) {
-          if (bb.actions[k].zone === zz) { lastActionIndex = k; break }
-        }
-
-        const protoRow = {
-          zone: zz,
-          date: bb.fullDate,
-          companyType: aa.companyType,
-          companyName: aa.companyName,
-          employeeType: aa.employeeType,
-          tabelNumber: aa.tabelNumber,
-          name: aa.name,
-          timeFirst: bb.actions[firstActionIndex].fullDate,
-          timeLast: bb.actions[lastActionIndex].fullDate,
-          timeTotal: (zz === "Зелёная зона" ? bb.sumTimeGreen : bb.sumTimeRed),
-          timeIn: [],
-          timeOut: []
-        };
-
-        bb.actions.forEach((cc, c) => {
-          if (zz === cc.zone) {
-            if (cc.direction === "Вход") {
-              protoRow.timeIn.push(rz.strSubString(rz.dateToString(cc.fullDate, "YYYY-MM-DD hh:mm:ss", -3), " ", ""));
-            }
-            else {
-              protoRow.timeOut.push(rz.strSubString(rz.dateToString(cc.fullDate, "YYYY-MM-DD hh:mm:ss", -3), " ", ""));
-            }
-          }
-        });
-
-        ans.push(protoRow);
-      });
       */
+
+      ["Зелёная зона", "Красная зона"].forEach((zz) => {
+        const curZoneLength = (bb.actions.filter((ff) => (ff.zone === zz))).length;
+
+        if (curZoneLength) {
+          let firstActionIndex = 0, lastActionIndex = 0;
+          for (let j = 0; j < bb.actions.length; j++) {
+            if (bb.actions[j].zone === zz) { firstActionIndex = j; break }
+          }
+          for (let k = bb.actions.length-1; k >= 0; k--) {
+            if (bb.actions[k].zone === zz) { lastActionIndex = k; break }
+          }
+
+          const protoRow = {
+            zone: zz,
+            date: bb.fullDate,
+            datestr: rz.dateToString(bb.fullDate, "YYYY-MM-DD"),
+            companyType: aa.companyType,
+            companyName: aa.companyName,
+            employeeType: aa.employeeType,
+            tabelNumber: aa.tabelNumber,
+            name: aa.name,
+            timeFirst: bb.actions[firstActionIndex].fullDate,
+            timeLast: bb.actions[lastActionIndex].fullDate,
+            timeTotal: (zz === "Зелёная зона" ? bb.sumTimeGreen : bb.sumTimeRed),
+            timeIn: [],
+            timeOut: [],
+            actions: bb.actions.filter((ff) => (ff.zone === zz))
+          };
+
+          bb.actions.forEach((cc, c) => {
+            if (zz === cc.zone) {
+              if (cc.direction === "Вход") {
+                protoRow.timeIn.push(rz.strSubString(rz.dateToString(cc.fullDate, "YYYY-MM-DD hh:mm:ss", -3), " ", ""));
+              }
+              else {
+                protoRow.timeOut.push(rz.strSubString(rz.dateToString(cc.fullDate, "YYYY-MM-DD hh:mm:ss", -3), " ", ""));
+              }
+            }
+          });
+
+          ans.push(protoRow);
+        }
+      });
+
     });
   });
 
