@@ -334,7 +334,7 @@ function cellRenderHTML(params) {
 
 function getRowHeight(params) {
     let heigh = 50;
-    if (params.data.actions && params.data.actions.length) heigh = params.data.actions.length * 35;
+    if (params.data && params.data.actions && params.data.actions.length) heigh = params.data.actions.length * 35;
     return heigh;
 }
 
