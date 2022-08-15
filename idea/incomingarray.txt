@@ -1,0 +1,16 @@
+[
+  {
+    name: 'Иванов Иван',
+    tabelNumber: '010100022',
+    group: 'Субподрядчик > Дигер > ИТР',
+    companyName: 'Дигер',
+    companyType: 'Субподрядчик',
+    employeeType: 'ИТР',
+    fullDate: '2022-08-03 20:21:01',
+    date: '2022-08-03',
+    time: '20:21:01',
+    zone: 'Зелёная зона',
+    direction: 'Выход',
+    accessPoint: 'Зеленая зона выход 1'
+  }, ...
+]

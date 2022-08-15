@@ -1,0 +1,16 @@
+[
+  {
+    "zone": "Зелёная зона",
+    "date": "2022-08-03",
+    "companyType": "Субподрядчик",
+    "companyName": "Дигер",
+    "employeeType": "ИТР",
+    "tabelNumber": "1234567",
+    "name": "Иванов Иван",
+    "timeFirst": "07:34",
+    "timeIn": "07:34, 09:40, 15:40",
+    "timeLast": "19:04",
+    "timeOut": "08:56, 15:30",
+    "timeTotal": "11:34"
+  }
+]

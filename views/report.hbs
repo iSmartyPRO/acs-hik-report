@@ -1,0 +1,23 @@
+<div class="uk-container uk-container-center">
+    <div class="uk-grid uk-margin-bottom">
+        <div class="uk-width-1-1 uk-text-center">
+            <h2>Загрузка отчёта</h2>
+            <p class="intro">Вам необходимо подгрузить файл отчёта полученный из системы СКУД</p>
+            <p>
+            <div class="js-upload uk-placeholder uk-text-center uk-padding-large">
+                <span uk-icon="icon: cloud-upload"></span>
+                <span class="uk-text-middle">Перенесите файт сюда или</span>
+                <div uk-form-custom>
+                    <input type="file" name="report">
+                    <span class="uk-link">выберите его нажав сюда</span>
+                </div>
+            </div>
+            <div class="uk" id="reportInfo" hidden>
+                Загруженный отчет: <span id="reportUrl"></span>
+
+            </div>
+            <progress id="js-progressbar" class="uk-progress" value="0" max="100" hidden></progress>
+            </p>
+        </div>
+    </div>
+</div>
