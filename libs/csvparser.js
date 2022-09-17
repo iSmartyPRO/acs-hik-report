@@ -87,7 +87,7 @@ csvlib.filterData = (data) => {
       currentTabNumber = aa.tabelNumber;
     }
     else { // Exist man
-      curRow = people[people.length - 1];
+      const curRow = people[people.length - 1];
       curRow.entrances.push({
         fullDate: aa.fullDate,
         direction: aa.direction,
@@ -102,7 +102,8 @@ csvlib.filterData = (data) => {
       let doing = true;
       while (doing && aa.entrances.length) {
         const ee = aa.entrances[0];
-        if (ee.direction === "Выход" || ee.zone === "Красная зона") {
+        // ee.zone === "Красная зона"
+        if (ee.direction === "Выход") { // find the first entrance to the green zone (fix-1: to any zone)
           aa.entrances.shift();
         }
         else {
@@ -111,19 +112,23 @@ csvlib.filterData = (data) => {
       }
     }
 
-    aa.fullTimeIn = aa.entrances.filter((ff) => (ff.direction === "Вход")).map((ee) => (ee.fullDate));
-    aa.fullTimeOut = aa.entrances.filter((ff) => (ff.direction === "Выход")).map((ee) => (ee.fullDate));
+    // aa.fullTimeIn = aa.entrances.filter((ff) => (ff.direction === "Вход")).map((ee) => (ee.fullDate));
+    // aa.fullTimeOut = aa.entrances.filter((ff) => (ff.direction === "Выход")).map((ee) => (ee.fullDate));
 
+    // filterring duplicates of similar recordset: вход_красная зона, вход_красная зона (delete it)
     if (aa.entrances && aa.entrances.length) {
       let currentAction = aa.entrances[0].direction + "_" + aa.entrances[0].zone;
+      let currentTime = aa.entrances[0].fullDate;
       let i = 1;
       while (i < aa.entrances.length) {
+        const timeDiff = Math.abs(aa.entrances[1].fullDate - currentTime) / 1000 / 60; // time diff of minutes
         const bb = aa.entrances[i].direction + "_" + aa.entrances[i].zone;
-        if (currentAction === bb) {
-          aa.entrances.splice(i, 1);
+        if (currentAction === bb && timeDiff < 1) { // similar entrance and time diff < 1 minute
+          aa.entrances.splice(i, 1); // delete the duplicate entrance (presumably the equipment error)
         }
         else {
           currentAction = aa.entrances[i].direction + "_" + aa.entrances[i].zone;
+          currentTime = aa.entrances[i].fullDate;
           i++;
         }
       }
@@ -131,10 +136,11 @@ csvlib.filterData = (data) => {
   });
 
   // Step-3: Groupping by dates
+  /*
   people.forEach((aa) => {
     aa.dates = [];
     aa.entrances.forEach((ee, e) => {
-      if (e === 0 || (ee.zone === "Зелёная зона" && ee.direction === "Вход")) {
+      if (e === 0 || (ee.direction === "Вход")) { // ee.zone === "Зелёная зона" || first value
         const curDate = {
           fullDate: ee.fullDate,
           actions: [{
@@ -171,30 +177,32 @@ csvlib.filterData = (data) => {
       }
     });
   });
+  */
 
   // Step-4: Make the Flat Array
   const ans = [];
   people.forEach((aa) => {
-    aa.dates.forEach((bb, b) => {
-      /*
-      bb.actions.forEach((cc, c) => {
+    aa.entrances.forEach((ee) => {
+        const datetimestr = rz.dateToString(ee.fullDate, "YYYY-MM-DD hh:mm:ss");
         const protoRow = {
-          zone: cc.zone,
-          date: cc.fullDate,
-          datestr: rz.dateToString(bb.fullDate, "YYYY-MM-DD"),
+          zone: ee.zone,
+          date: ee.fullDate,
+          direction: ee.direction,
+          datestr: rz.strSubString(datetimestr, "", " "),
+          timestr: rz.strSubString(datetimestr, " ", ""),
+          datetimestr,
           companyType: aa.companyType,
           companyName: aa.companyName,
           employeeType: aa.employeeType,
           tabelNumber: aa.tabelNumber,
-          name: aa.name,
-          timeTotal: (cc.zone === "Зелёная зона" ? bb.sumTimeGreen : bb.sumTimeRed),
-          direction: cc.direction
+          name: aa.name
         };
-
+        // name, tabelNumber, zone, date, datetimestr, datestr, timestr, direction, companyType, companyName, employeeType
         ans.push(protoRow);
-      });
-      */
+    });
 
+    /*
+    aa.dates.forEach((bb, b) => {
       ["Зелёная зона", "Красная зона"].forEach((zz) => {
         const curZoneLength = (bb.actions.filter((ff) => (ff.zone === zz))).length;
 
@@ -240,6 +248,7 @@ csvlib.filterData = (data) => {
       });
 
     });
+    */
   });
 
 
@@ -308,13 +317,13 @@ csvlib.filterData = (data) => {
   */
 
   // console.log(util.inspect(people, false, null, true))
-  //console.log(ans)
+  // console.log(ans)
 
 
   // Сортировка по дате ->
   ans.sort((a, b) => {
-    const aa = a.datestr // rz.dateToString(a.date, "YYYY-MM-DD hh:mm:ss");
-    const bb = b.datestr // rz.dateToString(b.date, "YYYY-MM-DD hh:mm:ss");
+    const aa = a.datetimestr;
+    const bb = b.datetimestr;
     return (aa < bb ? -1 : (aa > bb ? 1 : 0));
   });
 

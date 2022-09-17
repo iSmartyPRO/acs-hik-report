@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', async (event) => {
             filterParams: { values: getFilterValues, refreshValuesOnOpen: false },
             tooltipField: "zone",
             width: "130px"
-        }, /*
+        },
         {
             field: "direction",
             headerName: "Направление",
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', async (event) => {
             cellRenderer: cellRenderHTML,
             filter: "agDateColumnFilter",
             tooltipField: "date"
-        }, */
+        },
         {
             field: "datestr",
             headerName: "Дата_текст",
