@@ -87,11 +87,23 @@ function getGridSize() {
     return {height, width};
 }
 
-document.addEventListener('DOMContentLoaded', async (event) => {
+document.addEventListener("DOMContentLoaded", async (event) => {
     if (!csvfileid) return;
     rowData = await processCSVfile(csvfileid);
+    // Define working time:
+    const dayShift = ["07:00:00", "19:00:00"];
+    const nightShift = ["19:00:01", "23:59:59", "00:00:00", "06:59:59"];
+    const dayMs = dayShift.map((vv) => (rz.timeParseFromStr(vv)));
+    const nightMs = nightShift.map((vv) => (rz.timeParseFromStr(vv)));
+
+    // Redefine some fields and add some new ones:
     rowData.forEach((rr, r) => {
+        // Step-1: Add simple fields / Format dates
         rr.date = rz.dateFromString((rz.strSubString(rr.date, "", ".")).replace("T", " "), "YYYY-MM-DD hh:mm:ss");
+        if (rr.name.startsWith(".")) rr.name = rr.name.slice(-rr.name.length + 2);
+        rr.actions = []; rr.newShift = false; rr.actionsTable = ""; rr.timeFirst = ""; rr.timeLast = ""; rr.timeTotal = 0;
+        
+        /*
         rr.actionsTable = "<table style='line-height: 20px;'><tbody>";
         // if (r === 0) console.log(rr);
         rr.actions.forEach((aa) => {
@@ -103,8 +115,6 @@ document.addEventListener('DOMContentLoaded', async (event) => {
         });
         rr.actionsTable += "</tbody></table>";
 
-        // rr.datestr = rz.dateToString(rr.date, "YYYY-MM-DD");
-        /*
         if (rr.timeFirst) rr.timeFirst = rz.dateFromString((rz.strSubString(rr.timeFirst, "", ".")).replace("T", " "), "YYYY-MM-DD hh:mm:ss");
         if (rr.timeLast) rr.timeLast = rz.dateFromString((rz.strSubString(rr.timeLast, "", ".")).replace("T", " "), "YYYY-MM-DD hh:mm:ss");
         */
@@ -116,10 +126,9 @@ document.addEventListener('DOMContentLoaded', async (event) => {
 
     const eGridDiv = document.getElementById("resultgrid");
     const {height} = getGridSize();
-    document.getElementById("resultgrid").setAttribute("style",`height:${height}px`)
+    document.getElementById("resultgrid").setAttribute("style", `height:${height}px`);
 
-    const plainlist = true;
-
+    // zone, direction, date, name, companyName, companyType, employeeType, tabelNumber, datestr, datetimestr, timestr
     const columnDefs = [
         {
             field: "zone",
@@ -133,59 +142,56 @@ document.addEventListener('DOMContentLoaded', async (event) => {
         },
         {
             field: "direction",
-            headerName: "Направление",
+            headerName: "Направл",
             menuTabs: ["filterMenuTab"],
             cellRenderer: cellRenderHTML,
             filter: "agSetColumnFilter",
             filterParams: { values: getFilterValues, refreshValuesOnOpen: false },
-            tooltipField: "direction"
+            width: "130px"
         },
         {
             field: "date",
-            headerName: "Полная Дата",
+            headerName: "Полная_Дата",
             menuTabs: ["filterMenuTab"],
-            //valueFormatter: cellDateFormatter,
             cellRenderer: cellRenderHTML,
             filter: "agDateColumnFilter",
-            tooltipField: "date"
+            tooltipField: "date",
+            width: "170px"
         },
         {
-            field: "datestr",
-            headerName: "Дата_текст",
+            field: "name",
+            headerName: "ФИО",
             menuTabs: ["filterMenuTab"],
-            filter: "agTextColumnFilter",
-            tooltipField: "datestr",
-            width: "130px"
+            /* filter: "agTextColumnFilter", */
+            filter: "agSetColumnFilter",
+            cellRenderer: cellRenderHTML,
+            filterParams: { values: getFilterValues, refreshValuesOnOpen: false },
+            tooltipField: "name"
         },
         {
             field: "companyName",
             headerName: "Компания",
             menuTabs: ["filterMenuTab"],
-            cellRenderer: cellRenderHTML,
-            filter: "agTextColumnFilter",
+            /* filter: "agTextColumnFilter", */
+            filter: "agSetColumnFilter",
+            filterParams: { values: getFilterValues, refreshValuesOnOpen: false },
             tooltipField: "companyName"
         },
         {
             field: "companyType",
             headerName: "Тип компании",
             menuTabs: ["filterMenuTab"],
-            cellRenderer: cellRenderHTML,
             filter: "agSetColumnFilter",
             filterParams: { values: getFilterValues, refreshValuesOnOpen: false },
             tooltipField: "companyType"
         },
         {
-            field: "name",
-            headerName: "ФИО",
-            menuTabs: ["filterMenuTab"],
-            filter: "agTextColumnFilter",
-            tooltipField: "name"
-        },
-        {
             field: "tabelNumber",
             headerName: "Табельный номер",
             menuTabs: ["filterMenuTab"],
-            filter: "agTextColumnFilter",
+            /* filter: "agTextColumnFilter", */
+            filter: "agSetColumnFilter",
+            filterParams: { values: getFilterValues, refreshValuesOnOpen: false },
             tooltipField: "tabelNumber",
             width: "130px"
         },
@@ -196,6 +202,23 @@ document.addEventListener('DOMContentLoaded', async (event) => {
             filter: "agSetColumnFilter",
             filterParams: { values: getFilterValues, refreshValuesOnOpen: false },
             tooltipField: "employeeType",
+            width: "130px"
+        },
+        {
+            field: "newShift",
+            headerName: "Маркер начала смены",
+            menuTabs: ["filterMenuTab"],
+            filter: "agSetColumnFilter",
+            filterParams: { values: getFilterValues, refreshValuesOnOpen: false },
+            width: "130px",
+            hide:false
+        }/* ,
+        {
+            field: "datestr",
+            headerName: "Дата_текст",
+            menuTabs: ["filterMenuTab"],
+            filter: "agTextColumnFilter",
+            tooltipField: "datestr",
             width: "130px"
         },
         {
@@ -229,7 +252,7 @@ document.addEventListener('DOMContentLoaded', async (event) => {
             cellRenderer: cellRenderHTML,
             filter: "agNumberColumnFilter",
             width: "210px"
-        }
+        } */
     ];
 
     gridOptions = {
@@ -249,11 +272,20 @@ document.addEventListener('DOMContentLoaded', async (event) => {
         },
         // Группировка
         suppressAggFuncInHeader: true, // Подавить итоги в столбцах
+        suppressDragLeaveHidesColumns: true,
+        suppressMakeColumnVisibleAfterUnGroup: true,
+        suppressRowGroupHidesColumns: true,
         groupDisplayType: "groupRows", rowGroupPanelShow: "always", flex: 1,
         // Выделение
         enableRangeSelection: false,
         // rowSelection: "single",
         suppressRowClickSelection: false,
+        // status-bar: quick totals (filterred recordset)
+        statusBar: {
+            statusPanels: [
+                { statusPanel: "agTotalAndFilteredRowCountComponent", align: "left" }
+            ]
+        },
         // PopUp-Menu
         allowContextMenuWithControlKey: false, getContextMenuItems,
         floatingFilter: false, // Отдельная строка с фильтром
@@ -281,7 +313,7 @@ const onGridReady = function (params) {
 
 const onFirstDataRendered = function (params) {
     if (typeof params == "undefined") params = gridOptions;
-    const autosizeFields = ["zone", "companyType", "companyName", "name", "timeIn", "timeOut"];
+    const autosizeFields = ["name", "companyName", "companyType"]; // "timeIn", "timeOut"
     setTimeout(function () {
         // auto-size-column-width
         // params.columnApi.autoSizeColumns(autosizeFields);
@@ -314,39 +346,56 @@ function cellRenderHTML(params) {
         return params.value.join("; ");
     }
     else if (params.column.colId === "timeTotal") {
-        const hrs = String(parseInt(Number(params.value)));
-        const min = String(Math.round((Number(params.value) - hrs) * 60));
-        const clocktime = (hrs.length === 1 ? "0" : "") + hrs + ':' + (min.length === 1 ? "0" : "") + min;
-        return clocktime;
+        return rz.timeMillisecondsToTimeStr(params.value, "hh:mm");
     }
-    else if (~["date", "timeFirst", "timeLast"].indexOf(params.column.colId)) {
-        return rz.dateToString(params.value, (params.column.colId === "date___" ? "YYYY-MM-DD" : "YYYY-MM-DD hh:mm:ss"));
+    else if (params.column.colId === "date") {
+        const dstr = rz.dateToString(params.value, "dd YYYY-MM-DD hh:mm");
+        return "<span style='color:" + (~dstr.indexOf("вс") ? "Firebrick" : "Black") + ";'>" + dstr + "</span>";
     }
     else if (params.column.colId === "direction") {
-        return (params.value === "Вход" ? "<span uk-icon='sign-in' uk-tooltip='Вход' style='color:green;'></span>" : "<span uk-icon='sign-out' uk-tooltip='Выход' style='color:red;'></span>");
+        return (params.value === "Вход" ? "<span uk-icon='sign-in' uk-tooltip='Вход' style='color:" + (params.data.zone === "Зелёная зона" ? "green" : "hotpink") + ";'></span>" : "<span uk-icon='sign-out' uk-tooltip='Выход' style='color:" + (params.data.zone === "Зелёная зона" ? "Deepskyblue" : "Firebrick") + ";'></span>");
     }
     else if (params.column.colId === "zone") {
         return (params.value === "Зелёная зона" ? "<span uk-icon='home' style='color:green;'></span>&nbsp;&nbsp;Зелёная" : "<span uk-icon='bolt' style='color:red;'></span>&nbsp;&nbsp;Красная");
+    }
+    else if (params.column.colId === "name") {
+        // console.log({isNight: params.data.isNightEmploye, name: params.value});
+        return (params.data.isNightEmploye ? "<span uk-icon='user' uk-tooltip='Ночная смена' style='color:Darkmagenta;'></span>&nbsp;&nbsp;" : "<span uk-icon='user' uk-tooltip='Дневная смена' style='color:Darkorange;'></span>&nbsp;&nbsp;") + params.value;
     }
 
     return params.value;
 }
 
+let lastGetColumnState = 0, actionsVisible = false;
 function getRowHeight(params) {
     let heigh = 50;
-    if (params.data && params.data.actions && params.data.actions.length) heigh = params.data.actions.length * 35;
+    // if column "actions" is visible -> calculate height of each row!
+    const now = (new Date()).getTime();
+    if (now > (lastGetColumnState + (3 * 60 * 1000))) { // Make it faster! Allow 1 request in 3 seconds. Or get it from memory.
+        const colState = gridOptions.columnApi.getColumnState();
+        if (colState && colState.length) {
+            for (let i = 0; i < colState.length; i++) {
+                if (colState[i].colId === "actions" && !colState[i].hide) { actionsVisible = true; break }
+            };
+        }
+        lastGetColumnState = now;
+        // console.log({lastGetColumnState, actionsVisible});
+    }
+    if (actionsVisible && params.data && params.data.actions && params.data.actions.length) heigh = params.data.actions.length * 35;
     return heigh;
 }
 
+/* unnecessary function!
 function cellDateFormatter(params) {
     if (!params || !params.value || !rz.isDate(params.value)) return "";
     // return params.value;
     return rz.dateToString(params.value, (params.column.colId === "date" ? "YYYY-MM-DD" : "YYYY-MM-DD hh:mm:ss"));
 }
+*/
 
 function createImgTag(imgfilename, title) {
-    var ttl = (title ? "title='" + title + "'" : "");
-    var imgtag = ("<img border='0' " + ttl + " src='/sys/img/" + imgfilename + "'/>");
+    var ttl = (title ? " title='" + title + "'" : "");
+    var imgtag = ("<img border='0'" + ttl + " src='/sys/img/" + imgfilename + "'/>");
     return imgtag;
 }
 
@@ -366,6 +415,9 @@ function getFilterValues(params) {
         if (fld === "zone") {
             ans = rz.arrGetUnique(rowData.map((rr) => (rr.zone)));
         }
+        else if (fld === "companyName") {
+            ans = rz.arrGetUnique(rowData.map((rr) => (rr.companyName)));
+        }
         else if (fld === "companyType") {
             ans = rz.arrGetUnique(rowData.map((rr) => (rr.companyType)));
         }
@@ -375,19 +427,26 @@ function getFilterValues(params) {
         else if (fld === "direction") {
             ans = rz.arrGetUnique(rowData.map((rr) => (rr.direction)));
         }
+        else if (fld === "name") {
+            ans = rz.arrGetUnique(rowData.map((rr) => (rr.name)));
+        }
+        else if (fld === "tabelNumber") {
+            ans = rz.arrGetUnique(rowData.map((rr) => (rr.tabelNumber)));
+        }
+        else if (fld === "newShift") {
+            ans = [true, false];
+        }
 
         params.success(ans); resolve(ans);
     })
 }
 
 const getCellClassRules = {
-    "bg-palegreen": function (params) {
-        const zone = params.data.zone;
-        return ~zone.indexOf("Зеленая зона"); // true | false
+    "bg-palegreen": function (params) { // we should define this css-rule!
+        return ~params.data.zone.indexOf("Зеленая зона"); // true | false
     },
-    "bg-cornsilk": function (params) {
-        const zone = params.data.zone;
-        return ~zone.indexOf("Красная зона"); // true | false
+    "bg-cornsilk": function (params) { // we should define this css-rule!
+        return ~params.data.zone.indexOf("Красная зона"); // true | false
     }
 };
 

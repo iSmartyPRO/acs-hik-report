@@ -421,6 +421,9 @@ const numToPhrase2 = (num, d) => {
   return i[1].toUpperCase() + i.substring(2);
 };
 
+// Добавляет нули перед числом (всегда фиксированная длина числа)
+const prefInt = (number, len) => (Array(len).join("0") + number.slice(-len));
+
 /* ============================ */
 /* Strings */
 /* ============================ */
@@ -877,9 +880,30 @@ const dateToString = (scDate, formatparam, hoursOffset) => {
     case "YYYY-MM-DD hh:mm:ss":
       strDate = ye + "-" + mnth + "-" + da + " " + h + ":" + m + ":" + s;
       break; // YYYY-MM-DD hh:mm:ss
+    case "YYYY-MM-DD hh:mm":
+      strDate = ye + "-" + mnth + "-" + da + " " + h + ":" + m;
+      break; // YYYY-MM-DD hh:mm
+    case "dd YYYY-MM-DD hh:mm:ss":
+      strDate = dateGetWeekDay(ssDate) + " " + ye + "-" + mnth + "-" + da + " " + h + ":" + m + ":" + s;
+      break; // пн YYYY-MM-DD hh:mm:ss
+    case "dd YYYY-MM-DD hh:mm":
+      strDate = dateGetWeekDay(ssDate) + " " + ye + "-" + mnth + "-" + da + " " + h + ":" + m;
+      break; // пн YYYY-MM-DD hh:mm
     case "dd DD.MM.YYYY":
       strDate = dateGetWeekDay(ssDate) + " " + da + "." + mnth + "." + ye;
       break; // пн DD.MM.YYYY
+    case "dd DD.MM.YYYY hh:mm":
+      strDate = dateGetWeekDay(ssDate) + " " + da + "." + mnth + "." + ye + " " + h + ":" + m;
+      break; // пн DD.MM.YYYY hh:mm
+    case "dd DD.MM.YYYY hh:mm:ss":
+      strDate = dateGetWeekDay(ssDate) + " " + da + "." + mnth + "." + ye + " " + h + ":" + m + ":" + s;
+      break; // пн DD.MM.YYYY hh:mm:ss
+    case "hh:mm:ss":
+      strDate = h + ":" + m + ":" + s;
+      break; // hh:mm:ss
+    case "hh:mm":
+      strDate = h + ":" + m;
+      break; // hh:mm:ss
     default:
       strDate = ye + "-" + mnth + "-" + da;
       break; // YYYY-MM-DD
@@ -1003,6 +1027,32 @@ const JSDateToExcelDate = (serial) => {
   if (!isDate(td)) return 0;
   td.setTime(td.getTime() + (6 * 60000 * 60)); // td.addHours(6);
   return (Number(td) / 86400000) + 25569;
+};
+
+// 108000000 -> "00:30" - convert milliseconds time to string "hours:minutes" (:second - optional)
+const timeMillisecondsToTimeStr = (milliseconds, formatparam) => {
+  if (!milliseconds || !isNumber(milliseconds)) return "";
+  const frmt = formatparam || "hh:mm";
+  let msec = milliseconds || 0;
+  const hrs = Math.floor(milliseconds / 1000 / 60 / 60);
+  msec -= hrs * 1000 * 60 * 60;
+  const min = Math.floor(msec / 1000 / 60);
+  msec -= min * 1000 * 60;
+  const sec = Math.floor(msec / 1000);
+  msec -= sec * 1000;
+  const ans = prefInt(hrs, 2) + ":" + prefInt(min, 2) + (frmt === "hh:mm:ss" ? ":" + prefInt(sec, 2) : "");
+  return ans;
+};
+
+// "00:30" -> 108000000 milliseconds
+const timeParseFromStr = (strTime, formatparam) => {
+  if (!strTime || !isString(strTime) || !(/^\d\d:\d\d(:\d\d)?$/i).test(strTime)) return 0;
+  const tm = strGetAllNumbers(strTime, 0, true);
+  if (tm.length < 2) return 0;
+  let ans = tm[0] * 1000 * 60 * 60 * 60;
+  ans += tm[1] * 1000 * 60 * 60;
+  if (formatparam !== "hh:mm" && tm.length === 3) ans += tm[1] * 1000 * 60;
+  return ans;
 };
 
 /* ============================ */
@@ -1190,12 +1240,15 @@ module.exports = {
   numToPhrase2,
   declOfNum,
   numRandom,
+  prefInt,
   dateToString,
   dateFromString,
   dateDaysBetween,
   ExcelDateToJSDate,
   JSDateToExcelDate,
   validateTimestamp,
+  timeMillisecondsToTimeStr, // 108000000 -> "00:30" - convert milliseconds time to string "hours:minutes" (:second - optional)
+  timeParseFromStr, // "00:30" -> 108000000 milliseconds
   Base64encode,
   Base64decode,
   fetchGetHeaders,

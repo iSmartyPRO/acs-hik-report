@@ -51,6 +51,9 @@ csvlib.readAndParsingFiles = (filename) => new Promise((resolve, reject) => {
         )
         resolve({ result: true, data })
       })
+      .catch(err => {
+        reject(err)
+      })
   })
 })
 
@@ -72,14 +75,15 @@ csvlib.filterData = (data) => {
     if (currentTabNumber !== aa.tabelNumber) { // A new man:
       const newRow = {
         tabelNumber: aa.tabelNumber,
-        name: aa.name,
+        name: caseAlignment(aa.name),
         companyType: aa.companyType,
         companyName: aa.companyName,
         employeeType: aa.employeeType,
         entrances: [{
           fullDate: aa.fullDate,
           direction: aa.direction,
-          zone: aa.zone
+          zone: aa.zone,
+          workingShift: ""
         }]
       };
 
@@ -91,13 +95,14 @@ csvlib.filterData = (data) => {
       curRow.entrances.push({
         fullDate: aa.fullDate,
         direction: aa.direction,
-        zone: aa.zone
+        zone: aa.zone,
+        workingShift: ""
       });
     }
   });
 
-  // Step-2: Delete unnecessary dates
   people.forEach((aa) => {
+    // Step-2: Delete unnecessary top array recordsets. Array must be started from "Вход"
     if (aa.entrances && aa.entrances.length) {
       let doing = true;
       while (doing && aa.entrances.length) {
@@ -112,27 +117,62 @@ csvlib.filterData = (data) => {
       }
     }
 
-    // aa.fullTimeIn = aa.entrances.filter((ff) => (ff.direction === "Вход")).map((ee) => (ee.fullDate));
-    // aa.fullTimeOut = aa.entrances.filter((ff) => (ff.direction === "Выход")).map((ee) => (ee.fullDate));
-
-    // filterring duplicates of similar recordset: вход_красная зона, вход_красная зона (delete it)
+    // Step-3: filterring duplicates of similar recordset: вход_красная зона, вход_красная зона (delete it)
     if (aa.entrances && aa.entrances.length) {
       let currentAction = aa.entrances[0].direction + "_" + aa.entrances[0].zone;
-      let currentTime = aa.entrances[0].fullDate;
+      let currentTime = aa.entrances[0].fullDate.getTime();
       let i = 1;
       while (i < aa.entrances.length) {
-        const timeDiff = Math.abs(aa.entrances[1].fullDate - currentTime) / 1000 / 60; // time diff of minutes
+        const timeDiff = Math.abs(aa.entrances[i].fullDate.getTime() - currentTime) / 1000 / 60 / 60; // time diff of minutes
         const bb = aa.entrances[i].direction + "_" + aa.entrances[i].zone;
         if (currentAction === bb && timeDiff < 1) { // similar entrance and time diff < 1 minute
+          // Debug:
+          // if (aa.name === "Aitboy Baltabaev") console.log({msg: "Duplicate entry was deleted!", timeDiff, bb, currentAction, name: aa.name, date: rz.dateToString(aa.entrances[i].fullDate, "YYYY-MM-DD hh:mm:ss")});
           aa.entrances.splice(i, 1); // delete the duplicate entrance (presumably the equipment error)
         }
         else {
           currentAction = aa.entrances[i].direction + "_" + aa.entrances[i].zone;
-          currentTime = aa.entrances[i].fullDate;
+          currentTime = aa.entrances[i].fullDate.getTime();
           i++;
         }
       }
     }
+
+    // Step-4: Detect employe type: Day shift / Night shift !!!
+    aa.dayEntryCount = 0;
+    aa.nightEntryCount = 0;
+    aa.isNightEmploye = false;
+    if (aa.entrances && aa.entrances.length) {
+      const dayShift = ["07:00:00", "19:00:00"];
+      const nightShift = ["19:00:01", "23:59:59", "00:00:00", "06:59:59"];
+      const dayMs = dayShift.map((vv) => (rz.timeParseFromStr(vv)));
+      const nightMs = nightShift.map((vv) => (rz.timeParseFromStr(vv)));
+      aa.entrances.forEach((ee) => {
+        if (ee.direction === "Вход") { // ee.zone === "Зелёная зона"
+          const curTime = rz.timeParseFromStr(rz.dateToString(ee.fullDate, "hh:mm:ss"));
+          if (curTime >= dayMs[0] && curTime <= dayMs[1]) { aa.dayEntryCount++ }
+          else if ((curTime >= nightMs[0] && curTime <= nightMs[1]) || (curTime >= nightMs[2] && curTime <= nightMs[3])) { aa.nightEntryCount++ }
+        }
+      });
+      aa.isNightEmploye = Boolean(aa.nightEntryCount > aa.dayEntryCount);
+
+
+      // Step-5: Detect start point of work day:
+      // workingShift = "start" | "end"
+      let startShift = -1; endShift = -1;
+      for (let i = 0; i < aa.entrances.length; i++) {
+        const ss = aa.entrances[i];
+        if (ss.direction === "Вход") { // ss.zone === "Зелёная зона"
+          // Не доработано!
+
+
+
+
+        }
+      };
+
+    }
+
   });
 
   // Step-3: Groupping by dates
@@ -179,7 +219,7 @@ csvlib.filterData = (data) => {
   });
   */
 
-  // Step-4: Make the Flat Array
+  // Step-7: Make the Flat Array
   const ans = [];
   people.forEach((aa) => {
     aa.entrances.forEach((ee) => {
@@ -195,60 +235,13 @@ csvlib.filterData = (data) => {
           companyName: aa.companyName,
           employeeType: aa.employeeType,
           tabelNumber: aa.tabelNumber,
-          name: aa.name
+          name: aa.name,
+          isNightEmploye: aa.isNightEmploye,
+          workingShift: ee.workingShift
         };
         // name, tabelNumber, zone, date, datetimestr, datestr, timestr, direction, companyType, companyName, employeeType
         ans.push(protoRow);
     });
-
-    /*
-    aa.dates.forEach((bb, b) => {
-      ["Зелёная зона", "Красная зона"].forEach((zz) => {
-        const curZoneLength = (bb.actions.filter((ff) => (ff.zone === zz))).length;
-
-        if (curZoneLength) {
-          let firstActionIndex = 0, lastActionIndex = 0;
-          for (let j = 0; j < bb.actions.length; j++) {
-            if (bb.actions[j].zone === zz) { firstActionIndex = j; break }
-          }
-          for (let k = bb.actions.length-1; k >= 0; k--) {
-            if (bb.actions[k].zone === zz) { lastActionIndex = k; break }
-          }
-
-          const protoRow = {
-            zone: zz,
-            date: bb.fullDate,
-            datestr: rz.dateToString(bb.fullDate, "YYYY-MM-DD"),
-            companyType: aa.companyType,
-            companyName: aa.companyName,
-            employeeType: aa.employeeType,
-            tabelNumber: aa.tabelNumber,
-            name: aa.name,
-            timeFirst: bb.actions[firstActionIndex].fullDate,
-            timeLast: bb.actions[lastActionIndex].fullDate,
-            timeTotal: (zz === "Зелёная зона" ? bb.sumTimeGreen : bb.sumTimeRed),
-            timeIn: [],
-            timeOut: [],
-            actions: bb.actions.filter((ff) => (ff.zone === zz))
-          };
-
-          bb.actions.forEach((cc, c) => {
-            if (zz === cc.zone) {
-              if (cc.direction === "Вход") {
-                protoRow.timeIn.push(rz.strSubString(rz.dateToString(cc.fullDate, "YYYY-MM-DD hh:mm:ss", -3), " ", ""));
-              }
-              else {
-                protoRow.timeOut.push(rz.strSubString(rz.dateToString(cc.fullDate, "YYYY-MM-DD hh:mm:ss", -3), " ", ""));
-              }
-            }
-          });
-
-          ans.push(protoRow);
-        }
-      });
-
-    });
-    */
   });
 
 
@@ -316,8 +309,7 @@ csvlib.filterData = (data) => {
   });
   */
 
-  // console.log(util.inspect(people, false, null, true))
-  // console.log(ans)
+  // console.log(util.inspect(people, false, null, true));
 
 
   // Сортировка по дате ->
@@ -327,8 +319,19 @@ csvlib.filterData = (data) => {
     return (aa < bb ? -1 : (aa > bb ? 1 : 0));
   });
 
+  // console.log(util.inspect(ans, false, null, true));
+
   return {result: true, data: ans};
 }
 
+// Приводит "ФАМИЛИЮ Имя отчество" к "Фамилия Имя Отчетво" - исправляет регистр!
+function caseAlignment(name) {
+  let words = name.replace(/\./," ").replace(/\s+/," ").split(" ");
+  const upd = words.map((ww) => {
+    const aa = ww.toLowerCase();
+    return aa.slice(0,1).toUpperCase() + aa.slice(-aa.length+1);
+  });
+  return upd.join(" ");
+}
 
 module.exports = csvlib
